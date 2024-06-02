@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, session, flash
 from flask_debugtoolbar import DebugToolbarExtension
-from models import connect_db, db, User
-from forms import UserForm
+from models import connect_db, db, User, Feedback
+from forms import RegisterForm, LoginForm, FeedbackForm
 
 app = Flask(__name__)
 app.debug = True
@@ -26,7 +26,7 @@ def register_redirect():
 @app.route("/register", methods=["GET", "POST"])
 def new_user_registration():
     """Shows user registration form and allows them to sign up."""
-    form = UserForm()
+    form = RegisterForm()
 
     if form.validate_on_submit():
         username = form.username.data
@@ -39,15 +39,16 @@ def new_user_registration():
         db.session.add(new_user)
         db.session.commit()
         session["user_id"] = new_user.username
-        flash("Welcome! Account created successfully!")
-        return redirect("/secret")
+        flash("Welcome! Account created successfully!", "success")
+        return redirect(f"/users/{new_user.username}")
 
     return render_template("register.html", form=form)
 
 
 @app.route("/login", methods=["GET", "POST"])
 def show_login_form():
-    form = UserForm()
+    """Shows user the login form/allows them to log in."""
+    form = LoginForm()
 
     if form.validate_on_submit():
         username = form.username.data
@@ -55,18 +56,50 @@ def show_login_form():
 
         user = User.authenticate(username, password)
         if user:
-            flash(f"Welcome back, {user.username}!")
+            flash(f"Welcome back, {user.username}!", "success")
             session["user_id"] = user.username
-            return redirect("/secret")
+            return redirect(f"/users/{user.username}")
         else:
-            form.username.errors = ["Invalid username/password"]
+            flash("Invalid username/password.")
 
     return render_template("login.html", form=form)
 
 
-@app.route("/secret")
-def show_secret():
+@app.route("/logout")
+def logout_user():
+    session.pop("user_id")
+    flash("Successfully logged out!", "info")
+    return redirect("/")
+
+
+@app.route("/users/<username>")
+def show_user_info(username):
+    """Displays user's information."""
     if "user_id" not in session:
-        flash("Please log in!")
+        flash("Please log in!", "danger")
         return redirect("/login")
-    return render_template("secret.html")
+
+    user = User.query.get_or_404(username)
+    return render_template("user.html", user=user)
+
+
+@app.route("/users/<username>/feedback/add", methods=["GET", "POST"])
+def create_new_feedback(username):
+    """Allows user to make new feedback."""
+    if "user_id" not in session:
+        flash("Please log in to submit feedback!", "danger")
+        return redirect("/login")
+
+    form = FeedbackForm()
+    user = User.query.get_or_404(username)
+
+    if form.validate_on_submit():
+        title = form.title.data
+        content = form.content.data
+        new_feedback = Feedback(title=title, content=content, username=user.username)
+
+        db.session.add(new_feedback)
+        db.session.commit()
+        return redirect(f"/users/{user.username}")
+
+    return render_template("feedback.html", form=form)

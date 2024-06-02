@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title%}{{user.username}}{% endblock %}
+
+{% block content %}
+    <h1>Hello, {{user.username}}!</h1>
+
+    <p>First Name: {{user.first_name}}</p>
+    <p>Last Name: {{user.last_name}}</p>
+    <p>Email Name: {{user.email}}</p>
+
+    {% for feedback in user.feedback %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">{{feedback.title}}</h5>
+            <p class="card-text">{{feedback.content}}</p>
+            <form style="display:inline;" action="/feedback/{{feedback.id}}/update" method="GET">
+                <button type="submit" class="btn btn-info">Edit</button>
+            </form>
+            <form style="display:inline;" action="/feedback/{{feedback.id}}/delete" method="POST">
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+
+    <a href="/users/{{user.username}}/feedback/add" class="btn btn-info">Add Feedback</a>
+    <form style="display:inline;" action="/users/{{user.username}}/delete" method="POST">
+        <button class="btn btn-danger">Delete User</button>
+    </form>
+{% endblock %}
