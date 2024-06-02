@@ -60,7 +60,7 @@ def show_login_form():
             session["user_id"] = user.username
             return redirect(f"/users/{user.username}")
         else:
-            flash("Invalid username/password.")
+            flash("Invalid username/password.", "danger")
 
     return render_template("login.html", form=form)
 
@@ -83,6 +83,22 @@ def show_user_info(username):
     return render_template("user.html", user=user)
 
 
+@app.route("/users/<username>/delete", methods=["POST"])
+def delete_user(username):
+    """Deletes user from db."""
+    user = User.query.get_or_404(username)
+
+    if user.username != session["user_id"]:
+        flash("Cannot delete another user's account!", "danger")
+        return redirect(f"/users/{session["user_id"]}")
+    
+    session.pop("user_id")
+    db.session.delete(user)
+    db.session.commit()
+    flash("User account deleted", "info")
+    return redirect("/")
+
+
 @app.route("/users/<username>/feedback/add", methods=["GET", "POST"])
 def create_new_feedback(username):
     """Allows user to make new feedback."""
@@ -102,4 +118,51 @@ def create_new_feedback(username):
         db.session.commit()
         return redirect(f"/users/{user.username}")
 
-    return render_template("feedback.html", form=form)
+    return render_template("feedback.html", form=form, user=user)
+
+
+@app.route("/feedback/<int:feedback_id>/update", methods=["GET", "POST"])
+def update_feedback(feedback_id):
+    """Allows user to edit their feedback."""
+    if "user_id" not in session:
+        flash("Please log in to submit feedback!", "danger")
+        return redirect("/login")
+
+    form = FeedbackForm()
+    feedback = Feedback.query.get_or_404(feedback_id)
+    user = User.query.get_or_404(session["user_id"])
+
+    if feedback.username != user.username:
+        flash("Cannot edit another user's feedback!", "danger")
+        return redirect(f"/users/{user.username}")
+
+    if form.validate_on_submit():
+        title = form.title.data
+        content = form.content.data
+
+        feedback.title = title
+        feedback.content = content
+        db.session.commit()
+        return redirect(f"/users/{user.username}")
+
+    return render_template("feedback.html", form=form, feedback=feedback)
+
+
+@app.route("/feedback/<int:feedback_id>/delete", methods=["POST"])
+def delete_feedback(feedback_id):
+    """Allows user to delete their feedback."""
+    if "user_id" not in session:
+        flash("Please log in to submit feedback!", "danger")
+        return redirect("/login")
+
+    feedback = Feedback.query.get_or_404(feedback_id)
+    user = User.query.get_or_404(session["user_id"])
+
+    if feedback.username != user.username:
+        flash("Cannot delete another user's feedback!", "danger")
+        return redirect(f"/users/{user.username}")
+
+    db.session.delete(feedback)
+    db.session.commit()
+
+    return redirect(f"/users/{user.username}")

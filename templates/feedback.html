@@ -2,9 +2,30 @@
 {% block title%}Feedback{% endblock %}
 
 {% block content %}
+{% if feedback %}
+<h1>Edit {{feedback.title}}</h1>
+
+<form method="POST" action="/feedback/{{feedback.id}}/update">
+    {{form.hidden_tag()}}
+
+    {% for field in form 
+        if field.widget.input_type != 'hidden' %}
+        <p>
+            {{field.label}}
+            {% if field.name == 'title' %}
+                {{field(value=feedback.title)}}
+            {% else %}
+                {{field(value=feedback.content)}}
+            {% endif %}
+        </p>
+    {% endfor %}
+    <button class="btn btn-success" type="submit">Edit Feedback</button>
+</form>
+
+{% else %}
 <h1>Submit Feedback!</h1>
 
-<form method="POST">
+<form method="POST" action="/users/{{user.username}}/feedback/add">
     {{form.hidden_tag()}}
 
     {% for field in form 
@@ -16,4 +37,5 @@
     {% endfor %}
     <button class="btn btn-success" type="submit">Add Feedback</button>
 </form>
+{% endif %}
 {% endblock %}
